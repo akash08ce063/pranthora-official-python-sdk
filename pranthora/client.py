@@ -29,10 +29,12 @@ class Pranthora:
     def start(self, agent_id: str, assistant_overrides: Optional[Dict[str, Any]] = None):
         """
         Start a real-time voice session with an agent.
+        This connects your local microphone and speaker to the agent.
         
         Args:
             agent_id: The ID of the agent to connect to.
             assistant_overrides: Optional configuration overrides.
+                Example: {"variableValues": {"name": "John"}}
         """
         if not self._voice_client:
             self._voice_client = VoiceClient(self.base_url, self.api_key)

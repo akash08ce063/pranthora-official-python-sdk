@@ -1,10 +1,77 @@
 from typing import List, Optional, Dict, Any, Union
 from pranthora.utils.api_requestor import APIRequestor
-from pranthora.mappings import TTS_PROVIDERS, STT_CONFIGS, LLM_MODELS, VOICES, VAD_PROVIDERS
+from pranthora.mappings import (
+    TTS_PROVIDERS, STT_CONFIGS, LLM_MODELS, VOICES, VAD_PROVIDERS,
+    get_tts_provider_name, get_model_name, get_transcriber_name, 
+    get_voice_name, get_vad_provider_name
+)
 
 class Agents:
     def __init__(self, requestor: APIRequestor):
         self.requestor = requestor
+
+    def _transform_agent_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Transform agent response to replace IDs with friendly names.
+        
+        Args:
+            response: Raw API response
+            
+        Returns:
+            Transformed response with friendly names
+        """
+        if not response:
+            return response
+        
+        # Handle list of agents
+        if isinstance(response, list):
+            return [self._transform_agent_response(agent) for agent in response]
+        
+        # Transform single agent response
+        transformed = response.copy()
+        
+        # Transform agent model config
+        if "configurations" in transformed:
+            configs = transformed["configurations"]
+            
+            # Transform model config
+            if "model" in configs and isinstance(configs["model"], dict):
+                model_config = configs["model"]
+                if "model_provider_id" in model_config:
+                    model_name = get_model_name(model_config["model_provider_id"])
+                    model_config["model_name"] = model_name
+                    # Keep original ID for reference
+                    model_config["model_provider_id_original"] = model_config["model_provider_id"]
+            
+            # Transform TTS config
+            if "tts" in configs and isinstance(configs["tts"], dict):
+                tts_config = configs["tts"]
+                if "tts_provider_id" in tts_config:
+                    tts_name = get_tts_provider_name(tts_config["tts_provider_id"])
+                    tts_config["tts_provider_name"] = tts_name
+                    tts_config["tts_provider_id_original"] = tts_config["tts_provider_id"]
+                if "voice_name" in tts_config:
+                    voice_name = get_voice_name(tts_config["voice_name"])
+                    tts_config["voice_name_friendly"] = voice_name
+                    tts_config["voice_name_original"] = tts_config["voice_name"]
+            
+            # Transform transcriber config
+            if "transcriber" in configs and isinstance(configs["transcriber"], dict):
+                transcriber_config = configs["transcriber"]
+                if "provider_id" in transcriber_config:
+                    transcriber_name = get_transcriber_name(transcriber_config["provider_id"])
+                    transcriber_config["transcriber_name"] = transcriber_name
+                    transcriber_config["provider_id_original"] = transcriber_config["provider_id"]
+            
+            # Transform VAD config
+            if "vad" in configs and isinstance(configs["vad"], dict):
+                vad_config = configs["vad"]
+                if "vad_provider_id" in vad_config:
+                    vad_name = get_vad_provider_name(vad_config["vad_provider_id"])
+                    vad_config["vad_provider_name"] = vad_name
+                    vad_config["vad_provider_id_original"] = vad_config["vad_provider_id"]
+        
+        return transformed
 
     def create(
         self,
@@ -120,7 +187,8 @@ class Agents:
         if tools:
             payload["tools"] = tools
 
-        return self.requestor.request("POST", "/api/v1/agents", data=payload)
+        response = self.requestor.request("POST", "/api/v1/agents", data=payload)
+        return self._transform_agent_response(response)
 
     def list(self) -> List[Dict[str, Any]]:
         """
@@ -128,8 +196,10 @@ class Agents:
         
         Returns:
             List of agent dictionaries with complete agent information.
+            IDs are converted to friendly names (model_name, tts_provider_name, etc.)
         """
-        return self.requestor.request("GET", "/api/v1/agents")
+        response = self.requestor.request("GET", "/api/v1/agents")
+        return self._transform_agent_response(response)
 
     def get(self, agent_id: str) -> Dict[str, Any]:
         """
@@ -140,8 +210,10 @@ class Agents:
             
         Returns:
             Agent dictionary with complete information.
+            IDs are converted to friendly names (model_name, tts_provider_name, etc.)
         """
-        return self.requestor.request("GET", f"/api/v1/agents/{agent_id}")
+        response = self.requestor.request("GET", f"/api/v1/agents/{agent_id}")
+        return self._transform_agent_response(response)
 
     def update(
         self,
@@ -189,33 +261,81 @@ class Agents:
         
         # Build agent payload - name is required for updates if agent is provided
         agent_data = {}
-        if name is not None:
-            agent_data["name"] = name
-        if description is not None:
-            agent_data["description"] = description
-        if is_active is not None:
-            agent_data["is_active"] = is_active
-        # Include optional fields if provided
-        if "apply_noise_reduction" in kwargs:
-            agent_data["apply_noise_reduction"] = kwargs["apply_noise_reduction"]
-        if "recording_enabled" in kwargs:
-            agent_data["recording_enabled"] = kwargs["recording_enabled"]
-        if "tts_filler_enabled" in kwargs:
-            agent_data["tts_filler_enabled"] = kwargs["tts_filler_enabled"]
-        if "first_response_message" in kwargs:
-            agent_data["first_response_message"] = kwargs["first_response_message"]
         
-        if agent_data:
-            payload["agent"] = agent_data
+        # If any agent field is being updated, we need to include name
+        # If name is not provided, fetch current agent's name
+        needs_agent_update = (
+            name is not None or 
+            description is not None or 
+            is_active is not None or
+            "apply_noise_reduction" in kwargs or
+            "recording_enabled" in kwargs or
+            "tts_filler_enabled" in kwargs or
+            "first_response_message" in kwargs
+        )
+        
+        if needs_agent_update:
+            if name is not None:
+                agent_data["name"] = name
+            else:
+                # Fetch current agent to get existing name
+                try:
+                    current_agent = self.get(agent_id)
+                    agent_info = current_agent.get('agent', {})
+                    existing_name = agent_info.get('name')
+                    if existing_name:
+                        agent_data["name"] = existing_name
+                except Exception:
+                    # If we can't fetch, let the API return an error
+                    pass
+            
+            if description is not None:
+                agent_data["description"] = description
+            if is_active is not None:
+                agent_data["is_active"] = is_active
+            # Include optional fields if provided
+            if "apply_noise_reduction" in kwargs:
+                agent_data["apply_noise_reduction"] = kwargs["apply_noise_reduction"]
+            if "recording_enabled" in kwargs:
+                agent_data["recording_enabled"] = kwargs["recording_enabled"]
+            if "tts_filler_enabled" in kwargs:
+                agent_data["tts_filler_enabled"] = kwargs["tts_filler_enabled"]
+            if "first_response_message" in kwargs:
+                agent_data["first_response_message"] = kwargs["first_response_message"]
+            
+            if agent_data:
+                payload["agent"] = agent_data
         
         # Build model config if provided
         if model is not None or temperature is not None or system_prompt is not None:
             model_config = {}
+            
+            # If model is provided, use it
             if model is not None:
                 model_id = LLM_MODELS.get(model)
                 if not model_id:
                     model_id = model  # Fallback
                 model_config["model_provider_id"] = model_id
+            # If model is not provided but system_prompt or temperature is, fetch current agent
+            elif system_prompt is not None or temperature is not None:
+                # Fetch current agent to get existing model_provider_id
+                try:
+                    current_agent = self.get(agent_id)
+                    configs = current_agent.get('configurations', {})
+                    if 'model' in configs:
+                        existing_model_id = configs['model'].get('model_provider_id')
+                        if existing_model_id:
+                            model_config["model_provider_id"] = existing_model_id
+                        else:
+                            # Fallback: try to get from agent_model_config if available
+                            if 'agent_model_config' in current_agent:
+                                existing_model_id = current_agent['agent_model_config'].get('model_provider_id')
+                                if existing_model_id:
+                                    model_config["model_provider_id"] = existing_model_id
+                except Exception:
+                    # If we can't fetch, we'll let the API return an error
+                    pass
+            
             if temperature is not None:
                 model_config["temperature"] = temperature
             if system_prompt is not None:
@@ -224,8 +344,16 @@ class Agents:
                 model_config["max_tokens"] = kwargs["max_tokens"]
             if "tool_prompt" in kwargs:
                 model_config["tool_prompt"] = kwargs["tool_prompt"]
-            if model_config:
+            
+            # Only add model_config if it has model_provider_id (required)
+            if model_config.get("model_provider_id"):
                 payload["agent_model_config"] = model_config
+            elif model_config:
+                # If we have other fields but no model_provider_id, raise an error
+                raise ValueError(
+                    "Cannot update model configuration without model_provider_id. "
+                    "Please provide 'model' parameter or ensure the agent has an existing model configuration."
+                )
         
         # Build TTS config if provided
         if voice is not None:
@@ -285,7 +413,8 @@ class Agents:
         if force_update:
             params["force_update"] = "true"
         
-        return self.requestor.request("PUT", f"/api/v1/agents/{agent_id}", data=payload, params=params if params else None)
+        response = self.requestor.request("PUT", f"/api/v1/agents/{agent_id}", data=payload, params=params if params else None)
+        return self._transform_agent_response(response)
 
     def delete(self, agent_id: str, force_delete: bool = True) -> Dict[str, Any]:
         """

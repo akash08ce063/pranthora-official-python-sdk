@@ -1,6 +1,8 @@
 # Mappings for Pranthora SDK
 # This file contains mappings for Providers, Models, and Voices.
 
+from typing import Optional
+
 # --- TTS Providers ---
 TTS_PROVIDERS = {
     "eleven_labs": "13ad1a5f-f2cf-46fe-be29-3ef0f9a3d211",
@@ -119,3 +121,46 @@ VAD_PROVIDERS = {
     "default": "c284bf92-658b-4d1b-a2ff-0cba0892fd29",
     "silero": "c284bf92-658b-4d1b-a2ff-0cba0892fd29", # Assuming this is Silero or standard VAD
 }
+
+# --- Reverse Mappings (ID -> Friendly Name) ---
+# These are used to convert IDs back to friendly names in responses
+
+# Reverse TTS Provider mapping
+TTS_PROVIDERS_REVERSE = {v: k for k, v in TTS_PROVIDERS.items()}
+
+# Reverse LLM Model mapping
+LLM_MODELS_REVERSE = {v: k for k, v in LLM_MODELS.items()}
+
+# Reverse STT Config mapping (by provider ID)
+STT_CONFIGS_REVERSE = {}
+for name, config in STT_CONFIGS.items():
+    STT_CONFIGS_REVERSE[config["id"]] = name
+
+# Reverse Voice mapping (by voice ID)
+VOICES_REVERSE = {}
+for name, voice_info in VOICES.items():
+    VOICES_REVERSE[voice_info["id"]] = name
+
+# Reverse VAD Provider mapping
+VAD_PROVIDERS_REVERSE = {v: k for k, v in VAD_PROVIDERS.items()}
+
+# Helper functions to get friendly names from IDs
+def get_tts_provider_name(provider_id: str) -> Optional[str]:
+    """Convert TTS provider ID to friendly name"""
+    return TTS_PROVIDERS_REVERSE.get(provider_id, provider_id)
+
+def get_model_name(model_provider_id: str) -> Optional[str]:
+    """Convert model provider ID to friendly name"""
+    return LLM_MODELS_REVERSE.get(model_provider_id, model_provider_id)
+
+def get_transcriber_name(provider_id: str) -> Optional[str]:
+    """Convert transcriber provider ID to friendly name"""
+    return STT_CONFIGS_REVERSE.get(provider_id, provider_id)
+
+def get_voice_name(voice_id: str) -> Optional[str]:
+    """Convert voice ID to friendly name"""
+    return VOICES_REVERSE.get(voice_id, voice_id)
+
+def get_vad_provider_name(vad_provider_id: str) -> Optional[str]:
+    """Convert VAD provider ID to friendly name"""
+    return VAD_PROVIDERS_REVERSE.get(vad_provider_id, vad_provider_id)
