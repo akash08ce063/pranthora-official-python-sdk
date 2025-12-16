@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any, Callable, List
 # Audio Configuration
 FORMAT = 8  # pyaudio.paInt16
 CHANNELS = 1
-RATE = 24000  # Default for many modern TTS/STT, can be adjusted
+RATE = 16000  # Matches backend web audio stream sample rate
 CHUNK = 1024
 
 # Try to import pyaudio - it's optional
