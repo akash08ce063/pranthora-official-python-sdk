@@ -28,8 +28,8 @@ class Calls:
         if agent_id:
             params["agent_id"] = agent_id
 
-        # SDK should use the API-key based endpoint on the backend.
-        return self.requestor.request("POST", "/api/call/create_call_sdk", params=params)
+        # SDK uses the dedicated API-key based calls controller.
+        return self.requestor.request("POST", "/calls", params=params)
 
     def initiate_conference(
         self,
@@ -49,6 +49,6 @@ class Calls:
 
         return self.requestor.request(
             "POST",
-            "/api/call/conference/initiate_sdk",
+            "/calls/conference",
             data=payload,
         )
