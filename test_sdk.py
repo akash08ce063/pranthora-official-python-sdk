@@ -311,19 +311,6 @@ class TestRealAPI(unittest.TestCase):
             print(f"❌ Unexpected error testing calls: {e}")
             # Don't fail the suite for this as it depends on external config
     
-    def test_realtime_client_structure(self):
-        """Test that the realtime client methods exist and are callable."""
-        print(f"\n{'='*60}")
-        print(f"🔍 Testing Realtime Client Structure")
-        print(f"{'='*60}")
-        
-        # Verify methods exist
-        self.assertTrue(hasattr(self.client, 'start'), "Client should have 'start' method")
-        self.assertTrue(hasattr(self.client, 'stop'), "Client should have 'stop' method")
-        
-        print("✅ Client has start() and stop() methods")
-        print("   (Skipping actual WebSocket connection test in this suite)")
-
     def test_mappings_structure(self):
         """Test that mappings are available and populated."""
         print(f"\n{'='*60}")

@@ -27,5 +27,28 @@ class Calls:
         # I will add agent_id as an optional param just in case the spec is incomplete or updated.
         if agent_id:
             params["agent_id"] = agent_id
-            
-        return self.requestor.request("POST", "/api/call/create_call", params=params)
+
+        # SDK should use the API-key based endpoint on the backend.
+        return self.requestor.request("POST", "/api/call/create_call_sdk", params=params)
+
+    def initiate_conference(
+        self,
+        to_numbers,
+        conference_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """
+        Initiate a conference call using the API-key based SDK endpoint.
+
+        Args:
+            to_numbers: List of phone numbers to dial into the conference.
+            conference_name: Optional custom conference name.
+        """
+        payload: Dict[str, Any] = {"to_numbers": to_numbers}
+        if conference_name:
+            payload["conference_name"] = conference_name
+
+        return self.requestor.request(
+            "POST",
+            "/api/call/conference/initiate_sdk",
+            data=payload,
+        )
