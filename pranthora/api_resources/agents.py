@@ -187,7 +187,8 @@ class Agents:
         if tools:
             payload["tools"] = tools
 
-        response = self.requestor.request("POST", "/api/v1/agents", data=payload)
+        # SDK uses the dedicated API-key based agents controller
+        response = self.requestor.request("POST", "/agents", data=payload)
         return self._transform_agent_response(response)
 
     def list(self) -> List[Dict[str, Any]]:
@@ -198,7 +199,8 @@ class Agents:
             List of agent dictionaries with complete agent information.
             IDs are converted to friendly names (model_name, tts_provider_name, etc.)
         """
-        response = self.requestor.request("GET", "/api/v1/agents")
+        # SDK uses the dedicated API-key based agents controller
+        response = self.requestor.request("GET", "/agents")
         return self._transform_agent_response(response)
 
     def get(self, agent_id: str) -> Dict[str, Any]:
@@ -212,7 +214,8 @@ class Agents:
             Agent dictionary with complete information.
             IDs are converted to friendly names (model_name, tts_provider_name, etc.)
         """
-        response = self.requestor.request("GET", f"/api/v1/agents/{agent_id}")
+        # SDK uses the dedicated API-key based agents controller
+        response = self.requestor.request("GET", f"/agents/{agent_id}")
         return self._transform_agent_response(response)
 
     def update(
@@ -413,7 +416,8 @@ class Agents:
         if force_update:
             params["force_update"] = "true"
         
-        response = self.requestor.request("PUT", f"/api/v1/agents/{agent_id}", data=payload, params=params if params else None)
+        # SDK uses the dedicated API-key based agents controller
+        response = self.requestor.request("PUT", f"/agents/{agent_id}", data=payload, params=params if params else None)
         return self._transform_agent_response(response)
 
     def delete(self, agent_id: str, force_delete: bool = True) -> Dict[str, Any]:
@@ -428,4 +432,5 @@ class Agents:
             Dictionary with success status.
         """
         params = {"force_delete": "true" if force_delete else "false"}
-        return self.requestor.request("DELETE", f"/api/v1/agents/{agent_id}", params=params)
+        # SDK uses the dedicated API-key based agents controller
+        return self.requestor.request("DELETE", f"/agents/{agent_id}", params=params)
