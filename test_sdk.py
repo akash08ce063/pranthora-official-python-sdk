@@ -22,7 +22,7 @@ class TestRealAPI(unittest.TestCase):
     def setUp(self):
         # Real API key and default backend URL
         self.api_key = "kxL8EekUH8YNdL2jWvECtLslacdvZNFv"
-        self.base_url = "http://localhost:5050"
+        self.base_url = "http://localhost:5050/api/v1"
         self.client = Pranthora(api_key=self.api_key, base_url=self.base_url)
     
     def test_get_all_agents_real_api(self):

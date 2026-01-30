@@ -1,5 +1,6 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pranthora.utils.api_requestor import APIRequestor
+
 
 class Calls:
     def __init__(self, requestor: APIRequestor):
@@ -8,28 +9,43 @@ class Calls:
     def create(
         self,
         phone_number: str,
-        agent_id: str = None, # Optional in API spec? Spec says create_call takes phoneNumber in query. 
-                              # Wait, spec says /api/call/create_call takes phoneNumber in query. 
-                              # It doesn't seem to take agent_id in the spec shown! 
-                              # Let's re-read spec. 
-                              # Line 616: /api/call/create_call
-                              # Parameters: phoneNumber (query).
-                              # It seems the current backend implementation might be simple.
-                              # However, usually you need an agent_id. 
-                              # Let's stick to the spec: only phoneNumber.
+        agent_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Initiate an outbound call.
+        Initiate an outbound call to a phone number, optionally with a specific agent.
+
+        Args:
+            phone_number: The phone number to call (e.g. "+1234567890").
+            agent_id: Optional agent ID. If provided, the call is handled by this agent.
+                     If omitted, the backend uses the agent mapped to your Twilio number.
+
+        Returns:
+            Dict with status, call_sid, from_phone_number, etc.
         """
-        params = {"phoneNumber": phone_number}
-        # If the backend supports agent_id (which it should), we'd add it here.
-        # Based on the spec provided, it only lists phoneNumber. 
-        # I will add agent_id as an optional param just in case the spec is incomplete or updated.
+        params: Dict[str, Any] = {"phoneNumber": phone_number}
         if agent_id:
             params["agent_id"] = agent_id
-
-        # SDK uses the dedicated API-key based calls controller.
         return self.requestor.request("POST", "/calls", params=params)
+
+    def stop(
+        self,
+        call_sid: str,
+        from_phone_number: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Hang up an active call.
+
+        Args:
+            call_sid: Twilio call SID returned from create() or start().
+            from_phone_number: Your Twilio number that placed the call (required by backend to resolve Twilio client).
+
+        Returns:
+            Dict with status from the API.
+        """
+        data: Dict[str, Any] = {"call_sid": call_sid}
+        if from_phone_number:
+            data["from_phone_number"] = from_phone_number
+        return self.requestor.request("POST", "/calls/stop", data=data)
 
     def initiate_conference(
         self,

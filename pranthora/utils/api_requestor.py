@@ -10,6 +10,15 @@ from pranthora.exceptions import (
     APIConnectionError,
 )
 
+
+def _looks_like_jwt(token: str) -> bool:
+    """Return True if the token looks like a JWT (3 dot-separated segments)."""
+    if not token or not isinstance(token, str):
+        return False
+    parts = token.strip().split(".")
+    return len(parts) == 3
+
+
 class APIRequestor:
     def __init__(self, api_key: str, base_url: str):
         self.api_key = api_key
@@ -60,12 +69,13 @@ class APIRequestor:
         url = f"{self.base_url}{path}"
         
         default_headers = {
-            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "User-Agent": "Pranthora/Python/1.0.0",
-            # Also support X-User-ID for dev mode compatibility if needed, 
-            # but Bearer is the primary auth method as per plan.
         }
+        if _looks_like_jwt(self.api_key):
+            default_headers["Authorization"] = f"Bearer {self.api_key}"
+        else:
+            default_headers["X-API-Key"] = self.api_key
         
         if headers:
             default_headers.update(headers)
